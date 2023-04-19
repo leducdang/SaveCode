@@ -20,11 +20,10 @@ PROGMEM const unsigned char sine256[]  = {
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);     //0X3F  
 
-//int testPin = 7;
-//int enablePin = 6 ;
 #define start 8
 #define stop  7
 #define enter 13
+
 unsigned int timeSet=10000;
 unsigned long timeTangGiam;
 unsigned int value1, value2, value3;
