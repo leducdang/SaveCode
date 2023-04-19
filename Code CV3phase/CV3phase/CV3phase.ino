@@ -18,15 +18,17 @@ PROGMEM const unsigned char sine256[]  = {
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 
-LiquidCrystal_I2C lcd(0x27, 20, 4);     //0X3F  
+LiquidCrystal_I2C lcd(0x27, 20, 4);     //0X27 or 0X3F  
 
-#define start 8
+#define start 4
 #define stop  7
+#define enter 13
+#define up    8
+#define down  7
 #define enter 13
 
 unsigned int timeSet=10000;
-unsigned long timeTangGiam;
-unsigned int value1, value2, value3;
+unsigned int value1, value2, value3;    //gia tri cai dat phu
 
 volatile  float freq=1;
 const float refclk=122.549  ;     //  16 MHz/510/256
@@ -36,9 +38,13 @@ volatile unsigned long sigma;   // phase accumulator
 volatile unsigned long delta;  // phase increment
 byte phase0, phase1, phase2 ;
 unsigned int VR_in, F_in, F_out =0;
-unsigned long timeMillis = 0;
-
-unsigned char bitTang = 0, bitGiam = 0, bitChange = 0, enableVr = 0;
+unsigned long timeMillis = 0;            // thoi gian delay khong dung
+unsigned char bitThuanNghich =0 ;        // 0 quay thuan,1 quay nghich.
+unsigned char bitChayDung = 0;           // 1 chay 0 dung
+unsigned char mode = 0 ;                 //mode =1 trang hien thi cac tuy chon, 2 che do VR, 3 Mode TimeChange, 4 Mode Driver ,5 Mode SetTanSo
+unsigned float timeTGT= 5;               //thoi gian tang giam toc
+unsigned float f_set= 50;
+unsigned char vitri;
 
 void setup()
 {
@@ -47,37 +53,39 @@ void setup()
 
   //pinMode(enablePin, OUTPUT);      // sets the digital pin as output
   //pinMode(testPin, OUTPUT);      // sets the digital pin as output
-  pinMode(9, OUTPUT);     // pin9= PWM  output / frequency output
-  pinMode(10, OUTPUT);     // pin10= PWM  output / frequency output
-  pinMode(11, OUTPUT);     // pin11= PWM  output / frequency output
+  pinMode(9, OUTPUT);      // pin9 =  PWM  output / frequency output  UH  OCR1A
+  pinMode(10, OUTPUT);     // pin10=  PWM  output / frequency output  UL  OCR1B
+  pinMode(11, OUTPUT);     // pin11=  PWM  output / frequency output  WH  0CR2A
+  pinMode(3, OUTPUT);      // pin3 =  PWM  output / frequency output  WL  0CR2B
+  pinMode(6, OUTPUT);      // pin6 =  PWM  output / frequency output  VH  0CR0A
+  pinMode(5, OUTPUT);      // pin5 =  PWM  output / frequency output  VL  0CR0B
+
   pinMode(start,INPUT_PULLUP);
-  pinMode(stop,INPUT_PULLUP);
+  pinMode(stop ,INPUT_PULLUP);
   pinMode(enter,INPUT_PULLUP);
-
-  pinMode(3, OUTPUT);     // pin3= PWM  output / frequency output
-
-  pinMode(6, OUTPUT);     // pin6= PWM  output / frequency output
-  pinMode(5, OUTPUT);     // pin5= PWM  output / frequency output
-  pinMode(2, INPUT_PULLUP);
+  pinMode(up   ,INPUT_PULLUP);
+  pinMode(down ,INPUT_PULLUP);
+  pinMode(2, INPUT_PULLUP); //ngắt ngoài tại chân số 2 có trở treo dương ngắt tín hiệu khi ngắn mạch
 
   Setup_timer2();
   Setup_timer1();
   Setup_timer0 ();
+  OCR0A = 0;
+  OCR0B = 0;
   OCR2A = 0;
+  OCR2B = 0;
   OCR1A = 0;
   OCR1B = 0;
-  cbi (TIMSK2,TOIE2);
+  cbi (TIMSK2,TOIE2);               // TẮT NGẮT TIMER 2
 
-  attachInterrupt(0, DungKhan, FALLING ); 
-
-  //digitalWrite(enablePin, HIGH);
+  attachInterrupt(0, DungKhan, FALLING );   // tắt phát xung SPWM khi có lỗi xảy ra.
 
   lcd.init();
   lcd.backlight();
   lcd.setCursor(2, 0);
-  lcd.print("TAN SO CAI DAT");
+  lcd.print("Module Mach Bien Tan");
   lcd.setCursor(5, 1);
-  lcd.print("Hz");
+  lcd.print("thanhhung.edu.vn");
 
 
 // the waveform index is the highest 8 bits of sigma
@@ -87,116 +95,234 @@ void setup()
   delta = (1LL<<24)*freq/refclk ;  
 }
 void loop(){
-  
-  //changeFreq(20);
-  //delay(10000);
-  //changeFreq(25);
-  //delay(10000);
+    lcd.setCursor(1,1);
+    lcd.print("Mode 1: Control VR");
+    lcd.setCursor(2,1);
+    lcd.print("Frequency:");
+    lcd.setCursor(13,2);
+    lcd.print(F_out);
+    lcd.setCursor(1,3);
+    lcd.print("Time Change");
+    lcd.setCursor(13,3);
+    lcd.print(timeTGT);
+    lcd.setCursor(1,3);
+    lcd.print("Chieu quay:");
+    lcd.setCursor(1,3);
+}
+void displayControl(){
+  if ((millis() - timeMillis) > 100)
+  {
+    lcd.setCursor(5,1);
+    lcd.print("Control Motor");
+    lcd.setCursor(1,2);
+    lcd.print("Frequency:");
+    lcd.setCursor(13,2);
+    lcd.print(F_out);
+    lcd.setCursor(1,3);
+    lcd.print("Time Change");
+    lcd.setCursor(13,3);
+    lcd.print(timeTGT);
+    lcd.setCursor(1,3);
+    lcd.print("Chieu quay:");
+    lcd.setCursor(1,3);
+    if (bitThuanNghich == 0)
+    {
+      lcd.print("Thuan");
+    }
+    if (bitThuanNghich == 1)
+    {
+      lcd.print("Nghich");
+    }
+    
+    lcd.print("Chieu quay:");
+    timeMillis = millis(); 
+    Back();
+  }
+
+}
+//Mode 1: su dung bien tro
+void ChangeVR()        
+{
+  if ((millis() - timeMillis) > 100)
+  {
+    lcd.setCursor(1,1);
+    lcd.print("MODE 1: DUNG VR ");
+    lcd.setCursor(1,3);
+    lcd.print("Frequency:");
+    lcd.setCursor(11,3);
+    lcd.print(_freq);
+    timeMillis = millis(); 
+  }
   VR_in = analogRead(A0);
   F_in = map(VR_in,0,1023,0,100);
-
-/*        if (digitalRead(enter)==0)
-        {
-          if (enableVr == 1)
-              {enableVr = 0;
-              lcd.setCursor(5, 2);
-              lcd.print("disable VR");
-              }
-          else 
-             {
-                enableVr = 1;
-                lcd.setCursor(5, 2);
-                lcd.print("enable VR");
-              
-             }
-        }
-        if((F_in != F_out) && (enableVr ==1))
-          {
-          changeFreq(F_in);
-          F_out=F_in;
-          }
-
-
-        if (digitalRead(start)==0)
-          {
-            timeTangGiam = timeSet / F_in;
-            bitTang =1;
-            bitChange = 1;
-            sbi (TIMSK2,TOIE2);
-            timeMillis = millis();
-            Serial.println("Start");
-          }
-
-
-        if (digitalRead(stop)==0)
-          {
-            timeTangGiam = timeSet / F_out;
-            bitGiam=1;
-            bitChange = 1;
-            timeMillis = millis();
-            Serial.println("Stop");
-            //OCR2A = 0;
-            //OCR1A = 0;
-            //OCR1B = 0;
-            //cbi (TIMSK2,TOIE2);
-          }
-
-          if(((unsigned long)millis() - timeMillis > timeTangGiam) && (bitChange== 1))
-          {
-                if(bitTang)
-                {                
-                  changeFreq(F_out);
-                  F_out++;
-                  if(F_out> F_in)
-                  {
-                    F_out = F_in;
-                    bitTang=0;
-                    bitChange=0;
-                    Serial.println("Start Finish");
-                  }
-                }
-
-                if(bitGiam)
-                {                
-                  changeFreq(F_out);
-                  F_out--;
-                  if(F_out<=0)
-                  {
-                    F_out = 0;
-                    bitGiam=0;
-                    bitChange=0;
-                    OCR2A = 0;
-                    OCR1A = 0;
-                    OCR1B = 0;
-                    OCR2B = 0;
-                    OCR0A = 0;
-                    OCR0B = 0;
-                    cbi (TIMSK2,TOIE2);
-                    Serial.println("Stop finish");
-                  }
-                }
-               timeMillis = millis();  
-          }
-*/
   if(F_in != F_out)
-          {
-          changeFreq(F_in);
-          F_out=F_in;
-          }
-  lcd.setCursor(1, 1);
-  lcd.print(F_out);
-  delay(200);
+    {
+      changeFreq(F_in);
+      F_out=F_in;
+    }
+  if(digitalRead(start) == 0 )
+    {
+      chay();
+    }
+  else if (digitalRead(stop) == 0)
+    {
+      dung();
+    }
+    Back();
 }
+//Mode 2: set thoi gian tang giam toc
+void TGTangGiamToc(){
+  if ((unsigned long millis() - timeMillis())> 100)
+  {
+    lcd.setCursor(1.1);
+    lcd.print("Mode 2: Time Change");
+    lcd.setCursor(2.1);
+    lcd.print("Time:");
+    lcd.setCursor(8,1);
+    lcd.print(timeTGT);
+    timeMillis = millis();
+  }
+  if (digitalRead(up) == 0)
+  {
+    delay(20);
+    if (digitalRead(up) == 0)
+    {
+      timeTGT +=0.1; 
+      if (timeTGT>20)
+      {
+        timeTGT =20;
+      }
+    } 
+  }
+  if (digitalRead(down) == 0)
+  {
+    delay(20);
+    if (digitalRead(down) == 0)
+    {
+      timeTGT -=0.1;
+      if (timeTGT < 1)
+      {
+        timeTGT =1;
+      }  
+    }  
+  }
+  Back();    
+}
+//Mode 3: set chieu quay thuan nghich cua dong co
+void ThuanNghich(){
+  if ((unsigned long millis() - timeMillis())> 100)
+  {
+    lcd.setCursor(1.1);
+    lcd.print("Mode 3: Thuan Nghich");
+    lcd.setCursor(2.1);
+    lcd.print("Chieu quay:");
+    lcd.setCursor(14,1);
+    if (bitThuanNghich == 0 )
+    {
+      lcd.print("Thuan");
+    }
+    else if (bitThuanNghich ==1)
+    {
+      lcd.print("Nghich");
+    }
+    lcd.print(timeTangGiam);
+    timeMillis = millis();
+  }
 
-
+  if ((digitalRead(up) == 0) && (bitChayDung == 0 ))     //nut up duoc nhan va dong co dung  => set quay thuan
+  {
+    delay(20);
+    if (digitalRead(up)==0)
+    {
+      bitThuanNghich = 0; 
+    }              
+  }
+  if ((digital(down)==0) && (bitChayDung == 0))         // nut down duoc nhan va dong co dung => set quay nghich
+  {
+    delay(20);
+    if (digitalRead(down)==0)
+    {
+      bitThuanNghich = 1; 
+    }
+  }
+  Back();  
+}
+//Mode 4: set tan so bang nut bam
+void SetTanSo(){
+  if ((unsigned long millis() - timeMillis())> 100)
+  {
+    lcd.setCursor(1.1);
+    lcd.print("Mode 4: Set Tan So");
+    lcd.setCursor(2.1);
+    lcd.print("Set F:");
+    lcd.setCursor(8,1);
+    lcd.print(f_set);
+    timeMillis = millis();
+  }
+  if (digitalRead(up) == 0)
+  {
+    delay(20);
+    if (digitalRead(up) == 0)
+    {
+      f_set +=0.1; 
+      if (f_set>100)
+      {
+        f_set = 100;
+      } 
+    }   
+  }
+  if (digitalRead(down) == 0)
+  {
+    delay(20);
+    if (digitalRead(up) == 0)
+    {
+      f_set -=0.1;
+      if (f_set < 30)
+      {
+        f_set =30;
+      }  
+    }
+  }
+  Back();   
+}
+//Kiem tra thoat chuong trinh
+void Back(){
+  if (digitalRead(enter)==0)
+  {
+    delay(20);
+    if (digitalRead(enter)==0)
+    {
+      mode=1;
+    }
+  }
+}
+// chay dong co
+void chay(){
+  OCR0A = 0;
+  OCR0B = 0;
+  OCR2A = 0;
+  OCR2B = 0;
+  OCR1A = 0;
+  OCR1B = 0;
+  sbi (TIMSK2,TOIE2);
+}
+// stop dong co
+void dung(){
+  cbi (TIMSK2,TOIE2);
+  OCR0A = 0;
+  OCR0B = 0;
+  OCR1A = 0;
+  OCR1B = 0;
+  OCR2A = 0;
+  OCR2B = 0;
+}
+// thay doi tan so
 void changeFreq(float _freq){
   cbi (TIMSK2,TOIE2);              // disable timer2 overflow detect   - tắt ngắt timer2 
   freq = _freq;
-  delta=(1LL<<24)*freq/refclk;  // update phase increment
+  delta=(1LL<<24)*freq/refclk;     // update phase increment
   sbi (TIMSK2,TOIE2);              // enable timer2 overflow detect     - bật ngắt timer 2
 } 
-
-
 
 //******************************************************************
 
@@ -238,12 +364,10 @@ void Setup_timer2() {
 // timer1 setup  (sets pins 9 and 10)
 // set prscaler to 1, PWM mode to phase correct PWM,  16000000/510 = 31372.55 Hz clock
 void Setup_timer1() {
-
 // Timer1 Clock Prescaler to : 1
   sbi (TCCR1B, CS10);
   cbi (TCCR1B, CS11);
   cbi (TCCR1B, CS12);
-
   // Timer1 PWM Mode set to Phase Correct PWM
   cbi (TCCR1A, COM1A0);  // clear OC1A on Compare Match, PWM pin 9
   sbi (TCCR1A, COM1A1);
@@ -256,9 +380,7 @@ void Setup_timer1() {
   cbi (TCCR1B, WGM13);
 }
 
-
 //SET TIMER 0
-
 void Setup_timer0() {
 
 // Timer0 Clock Prescaler to : 1
@@ -294,22 +416,22 @@ ISR(TIMER2_OVF_vect) {
   //sbi(PORTD,testPin);          
 
   sigma=sigma+delta; // soft DDS, phase accu with 32 bits
-  phase0=sigma >> 24;     // use upper 8 bits for phase accu as frequency information
-                         // read value fron ROM sine table and send to PWM DAC
+                          // read value fron ROM sine table and send to PWM DAC
+  phase0 = sigma >> 24;     // use upper 8 bits for phase accu as frequency information                     
   phase1 = phase0 +85 ;
   phase2 = phase0 +170 ;
 
   value1 = pgm_read_byte_near(sine256 + phase0);
   if(value1 > 240)value1 = 240;
-  if(value1 < 10)value1 = 10;
+  if(value1 < 10) value1 = 10;
 
   value2 = pgm_read_byte_near(sine256 + phase1);
   if(value2 > 240)value2 = 240;
-  if(value2 < 10)value2 = 10;
+  if(value2 < 10) value2 = 10;
 
   value3 = pgm_read_byte_near(sine256 + phase2);
   if(value3 > 240)value3 = 240;
-  if(value3 < 10)value3 = 10;
+  if(value3 < 10) value3 = 10;
 
   //OCR2A=pgm_read_byte_near(sine256 + phase0)  ;  // pwm pin 11
   //OCR2B=pgm_read_byte_near(sine256 + phase0) + 20;  // pwm pin 3
