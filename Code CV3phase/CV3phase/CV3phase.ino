@@ -41,7 +41,7 @@ unsigned int VR_in, F_in, F_out =0;
 unsigned long timeMillis = 0;            // thoi gian delay khong dung
 unsigned char bitThuanNghich =0 ;        // 0 quay thuan,1 quay nghich.
 unsigned char bitChayDung = 0;           // 1 chay 0 dung
-unsigned char mode = 0 ;                 //mode =1 trang hien thi cac tuy chon, 2 che do VR, 3 Mode TimeChange, 4 Mode Driver ,5 Mode SetTanSo
+unsigned char mode = 0 ;                 //mode =1 quay ve cac tuy chon, 2 control motor, 3 che do VR, 4 Mode TimeChange, 5 Mode Driver ,6 Mode SetTanSo
 unsigned float timeTGT= 5;               //thoi gian tang giam toc
 unsigned float f_set= 50;
 unsigned char vitri;
@@ -95,20 +95,120 @@ void setup()
   delta = (1LL<<24)*freq/refclk ;  
 }
 void loop(){
-    lcd.setCursor(1,1);
-    lcd.print("Mode 1: Control VR");
-    lcd.setCursor(2,1);
-    lcd.print("Frequency:");
-    lcd.setCursor(13,2);
-    lcd.print(F_out);
-    lcd.setCursor(1,3);
-    lcd.print("Time Change");
-    lcd.setCursor(13,3);
-    lcd.print(timeTGT);
-    lcd.setCursor(1,3);
-    lcd.print("Chieu quay:");
-    lcd.setCursor(1,3);
+  switch (mode)
+  {
+  case 0:
+    displayMain();
+    break;
+  case 1:
+    displayControl();
+    break;
+  case 2:
+    ChangeVR();
+    break;
+  case 3:
+    TGTangGiamToc();
+    break;
+  case 4:
+    ThuanNghich();
+    break;
+  case 5:
+    SetTanSo();
+    break;
+  default:
+    break;
+  }
+  
 }
+void displayMain(){
+  if (vitri > 0 && vitri <5 )
+  {
+    lcd.setCursor(5,1);
+    lcd.print("Slect Mode");
+    lcd.setCursor(1,2);
+    lcd.print("Mode 1: Display Control");
+    lcd.setCursor(1,3);
+    lcd.print("Mode 2: Control VR");
+    lcd.setCursor(1,4);
+    lcd.print("Mode 3: Time Change");
+  }
+  if (vitri>4)
+  {
+    lcd.setCursor(5,1);
+    lcd.print("Slect Mode");
+    lcd.setCursor(1,2);
+    lcd.print("Mode 3: Motor Driver");
+    lcd.setCursor(1,3);
+    lcd.print("Mode 4: Set Freq");
+  }
+
+  if (digitalRead(up) == 0 )
+  {
+    delay(20);
+    if (digitalRead(up) == 0 )
+    {
+      vitri ++;
+      if (vitri < 1)
+      {
+        vitri = 1;
+      } 
+    }
+  }
+  if (digitalRead(down) == 0 )
+  {
+    delay(20);
+    if (digitalRead(down) == 0 )
+    {
+      vitri --;
+      if (vitri > 5)
+      {
+        vitri =5;
+      }  
+    }
+  }
+  if (digitalRead(enter)==0)
+  {
+    delay(20);
+    if (digitalRead(enter)==0)
+    {
+      mode = vitri
+    }    
+  }  
+  switch (vitri){
+      case 1:
+      {
+
+        lcd.setCursor(2,1);
+        lcd.print("*");
+        break;
+      }
+      case 2:
+      {
+        lcd.setCursor(3,1);
+        lcd.print("*");
+        break;
+      }
+      case 3:
+      {
+        lcd.setCursor(4,1);
+        lcd.print("*");
+        break;
+      }
+      case 4:
+      {
+        lcd.setCursor(2,1);
+        lcd.print("*");
+        break;
+      }
+      case 5:
+      {
+        lcd.setCursor(3,1);
+        lcd.print("*");
+        break;
+      }
+  }
+}
+
 void displayControl(){
   if ((millis() - timeMillis) > 100)
   {
