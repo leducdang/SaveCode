@@ -21,7 +21,7 @@ PROGMEM const unsigned char sine256[]  = {
 LiquidCrystal_I2C lcd(0x27, 20, 4);     //0X27 or 0X3F  
 
 #define start 4
-#define stop  7
+#define stop  12
 #define enter 13
 #define up    8
 #define down  7
@@ -36,17 +36,18 @@ volatile unsigned long sigma;   // phase accumulator
 volatile unsigned long delta;  // phase increment
 byte phase0, phase1, phase2 ;
 
-unsigned int VR_in, F_in, F_out =0;
+float VR_in, F_in, F_out =0;             // cai tan so theo bien tro  mode 2.
 unsigned long timeMillis = 0;            // thoi gian delay khong dung
 unsigned char bitThuanNghich =0 ;        // 0 quay thuan,1 quay nghich.
 unsigned char bitChayDung = 0;           // 1 chay 0 dung
 unsigned char mode = 0 ;                 //mode =1 quay ve cac tuy chon, 2 control motor, 3 che do VR, 4 Mode TimeChange, 5 Mode Driver ,6 Mode SetTanSo
-unsigned long timeTGT= 5000,timeChange;             //thoi gian tang giam toc đơn vị ms
-float f_set= 50, f_change = 0;
+unsigned long timeChange;                //thoi gian tang giam toc đơn vị ms
+float f_set= 50, f_change = 0;           // tan so theo cai dat mode 1 và 
 unsigned char vitri = 1;
 char sttButton =0, sttMotor =0 ;     // 0 la dung, 1 la chay.
 unsigned long timeBack =0, timeCTMotor ;
-
+float timeTGT= 5;
+unsigned char bitStop = 0;
 void setup()
 {
   Serial.begin(9600);        // connect to the serial port
@@ -154,9 +155,9 @@ void displayMain(){
     lcd.setCursor(5,0);
     lcd.print("Slect Mode");
     lcd.setCursor(0,1);
-    lcd.print("3: Motor Driver");
+    lcd.print("4: Motor Driver");
     lcd.setCursor(0,2);
-    lcd.print("4: Set Freq");
+    lcd.print("5: Set Freq");
     timeMillis = millis();
     }
   }
@@ -235,11 +236,13 @@ void displayMain(){
 }
 
 void displayControl(){
-    lcd.setCursor(5,0);
+  if ((unsigned long)(millis() - timeMillis) > 500)
+  {
+    lcd.setCursor(4,0);
     lcd.print("Control Motor");
     lcd.setCursor(1,1);
     lcd.print("F:");
-    lcd.setCursor(10,1);
+    lcd.setCursor(12,1);
     lcd.print("T:");
     lcd.setCursor(1,2);
     lcd.print("Driver:");
@@ -253,73 +256,238 @@ void displayControl(){
       lcd.print("Nghich");
     }
 
-    if ((unsigned long)(millis() - timeMillis) > 200)
-  {
     lcd.setCursor(4,1);
-    lcd.print(f_set);
+//    lcd.print(f_set);
+    lcd.print(f_change);
     lcd.setCursor(14,1);
     lcd.print(timeTGT);
-    lcd.setCursor(8,3);
-    lcd.print("Start");
+    lcd.setCursor(1,3);
+    if (sttMotor == 0)
+    {
+      lcd.print("Stop");
+    }
+    else
+    {
+      lcd.print("Start");
+    }
     timeMillis = millis();   
   }
+
+  if(digitalRead(start) == 0 )
+    {
+      timeBack = millis();
+      while (digitalRead(start) == 0);
+      if ((unsigned long) millis() - timeBack > 200)
+      {
+        timeChange = ( timeTGT * 1000 ) / ( f_set * 10 );                         // thoi gian thay doi ms / 0,1HZ
+        sttMotor = 1;
+        lcd.clear();
+        Serial.println(timeTGT);
+        Serial.println(f_set);
+        Serial.println(timeChange);
+      }   
+    }
+  if (digitalRead(stop) == 0)
+    {
+      timeBack = millis();
+      while (digitalRead(stop) == 0);
+      if ((unsigned long) millis() - timeBack > 200)
+      {
+        sttMotor = 0;
+        bitStop = 1;
+        lcd.clear();
+      }  
+    }
+
+  if (sttMotor == 1)
+  {
+    if (((unsigned long)millis() - timeCTMotor )> timeChange)
+    {
+      if (f_change < f_set)
+      {
+          f_change += 0.1;
+          changeFreq(f_change);
+           Serial.println(f_change);
+       }
+       if (f_change > f_set)
+       {
+          f_change -= 0.1;
+          changeFreq(f_change);
+       } 
+      timeCTMotor = millis();
+    }
+  }
+  if (bitStop == 1 && sttMotor == 0)
+  {
+    /* code */
+    if (( (unsigned long)millis() - timeCTMotor ) > timeChange)
+    {
+      if (f_change > 0)
+       {
+          f_change -= 0.1;
+          changeFreq(f_change);
+           Serial.println(f_change);
+       }
+       else
+       {
+          cbi (TIMSK2,TOIE2);
+          OCR0A = 0;
+          OCR0B = 0;
+          OCR1A = 0;
+          OCR1B = 0;
+          OCR2A = 0;
+          OCR2B = 0;
+          bitStop = 0;
+       }
+      timeCTMotor = millis();
+    }
+  }
+
+
   if (Back() == 1)
   {
-      mode = 0;
-      lcd.clear();
-      sttButton = 0;
+      if (sttMotor == 0 && bitStop == 0)
+      {
+        mode = 0;
+        lcd.clear();
+        sttButton = 0;
+      }
+      else
+      {
+        lcd.setCursor(7,3);
+        lcd.print("--Off Motor--");
+        sttButton = 0;
+      }
   }
 
 }
 //Mode 1: su dung bien tro
 void ChangeVR()        
 {
-  if (( (unsigned long)millis() - timeMillis) > 200)
+  if (( (unsigned long)millis() - timeMillis) > 500)
   { 
-    lcd.clear();
+    //lcd.clear();
     lcd.setCursor(1,0);
     lcd.print("MODE 2: DUNG VR ");
     lcd.setCursor(1,2);
     lcd.print("F:");
     lcd.setCursor(11,2);
-    lcd.print(f_set);
+    lcd.print(F_in);
+     lcd.setCursor(1,3);
+    if (sttMotor == 0)
+    {
+      lcd.print("Stop");
+    }
+    else
+    {
+      lcd.print("Start");
+    }
     timeMillis = millis(); 
   }
   VR_in = analogRead(A0);
-  f_set = map(VR_in,0,1023,0,100);
+  F_in = map(VR_in,0,1023,0,100);
   
   //NOTE: tan so se thay doi lien tuc
   if(digitalRead(start) == 0 )
     {
-      chay();
+      timeBack = millis();
+      while (digitalRead(start) == 0);
+      if ((unsigned long) millis() - timeBack > 200)
+      {
+        sttMotor = 1;
+        timeChange = ( timeTGT*1000 )/ ( F_in * 10 );                                // thoi gian ms/0,1 HZ
+        lcd.clear();
+      }   
     }
   else if (digitalRead(stop) == 0)
     {
-      dung();
+      timeBack = millis();
+      while (digitalRead(stop) == 0);
+        if ((unsigned long) millis() - timeBack > 200)
+        {
+          sttMotor = 0;
+          bitStop =1;
+          lcd.clear();         
+        }  
     }
+  
+  if (sttMotor == 1)
+  {
+    if ((unsigned long)millis() - timeCTMotor > timeChange)
+    {
+      if (F_out < F_in)
+      {
+          F_out += 0,1;
+          changeFreq(F_out);
+       }
+       if (F_out > F_in)
+       {
+          F_out -= 0,1;
+          changeFreq(F_out);
+       } 
+      timeCTMotor = millis();
+    }
+  }
+  if (bitStop == 1 && sttMotor == 0)
+  {
+    /* code */
+    if ((unsigned long)millis() - timeCTMotor > timeChange)
+    {
+      if (F_out > 10)
+       {
+          F_out -= 0,1;
+          changeFreq(F_out);
+       }
+       else
+       {
+          cbi (TIMSK2,TOIE2);
+          OCR0A = 0;
+          OCR0B = 0;
+          OCR1A = 0;
+          OCR1B = 0;
+          OCR2A = 0;
+          OCR2B = 0;
+          bitStop = 0;
+       }
+      timeCTMotor = millis();
+    }
+  }
+  
+  
   if (Back() == 1)
   {
-      mode = 0;
-      lcd.clear();
-      sttButton = 0;
+      if (sttMotor == 0 && bitStop == 0)
+      {
+        mode = 0;
+        lcd.clear();
+        sttButton = 0;
+      }
+      else
+      {
+        lcd.setCursor(7,3);
+        lcd.print("--Off Motor--");
+        sttButton = 0;
+      }     
   }
 }
 //Mode 2: set thoi gian tang giam toc
 void TGTangGiamToc(){
   if(( (unsigned long) millis() - timeMillis)> 200)
   {
-    lcd.clear();
     lcd.setCursor(1,0);
-    lcd.print("Mode 2: Time Change");
+    lcd.print("Mode 3: Time Change");
     lcd.setCursor(1,2);
     lcd.print("Time:");
-    lcd.setCursor(8,2);
+    lcd.setCursor(7,2);
     lcd.print(timeTGT);
+    lcd.setCursor(13,2);
+    lcd.print("s");
+
     timeMillis = millis();
   }
   if(digitalRead(up) == 0)
   {
-    delay(100);
+    delay(500);
     if(digitalRead(up) == 0)
     {
       timeTGT +=0.1; 
@@ -327,18 +495,20 @@ void TGTangGiamToc(){
       {
         timeTGT =20;
       }
+ //     lcd.clear();
     } 
   }
   if (digitalRead(down) == 0)
   {
-    delay(100);
+    delay(500);
     if (digitalRead(down) == 0)
     {
-      timeTGT -=0.1;
+      timeTGT -= 0.1;
       if (timeTGT < 1)
       {
-        timeTGT =1;
+        timeTGT = 1;
       }  
+ //    lcd.clear();
     }  
   }
   if (Back() == 1)
@@ -352,11 +522,11 @@ void TGTangGiamToc(){
 void ThuanNghich(){
   if(( (unsigned long) millis() - timeMillis)> 100)
   {
-    lcd.setCursor(1,0);
-    lcd.print("Mode 3: Thuan Nghich");
-    lcd.setCursor(2,2);
+    lcd.setCursor(0,0);
+    lcd.print("Mode 4: MOTOR DRIVER");
+    lcd.setCursor(1,2);
     lcd.print("Chieu quay:");
-    lcd.setCursor(14,2);
+    lcd.setCursor(13,2);
     if (bitThuanNghich == 0 )
     {
       lcd.print("Thuan");
@@ -368,21 +538,25 @@ void ThuanNghich(){
     timeMillis = millis();
   }
 
-  if((digitalRead(up) == 0) && (bitChayDung == 0 ))     //nut up duoc nhan va dong co dung  => set quay thuan
+  if((digitalRead(up) == 0) && (bitChayDung == 0 ))          //nut up duoc nhan va dong co dung  => set quay thuan
   {
-    delay(20);
-    if (digitalRead(up)==0)
-    {
-      bitThuanNghich = 0; 
+      timeBack = millis();
+      while(digitalRead(up) == 0);
+      if ((unsigned long)millis() - timeBack >200)
+      {
+        bitThuanNghich = 0;
+        lcd.clear();  
+      }
     }              
-  }
   if ((digitalRead(down)==0) && (bitChayDung == 0))         // nut down duoc nhan va dong co dung => set quay nghich
   {
-    delay(20);
-    if (digitalRead(down)==0)
-    {
-      bitThuanNghich = 1; 
-    }
+    timeBack = millis();
+    while(digitalRead(down) == 0);
+    if ((unsigned long)millis() - timeBack >200)
+      {
+        bitThuanNghich = 1;
+        lcd.clear();  
+      }
   }
   if (Back() == 1)
   {
@@ -396,31 +570,31 @@ void SetTanSo(){
   if(( (unsigned long) millis() - timeMillis)> 100)
   {
     lcd.setCursor(1,0);
-    lcd.print("Mode 4: Set Tan So");
+    lcd.print("Mode 5: Set Tan So");
     lcd.setCursor(2,2);
     lcd.print("Set F:");
-    lcd.setCursor(8,2);
+    lcd.setCursor(9,2);
     lcd.print(f_set);
     timeMillis = millis();
   }
   if(digitalRead(up) == 0)
   {
-    delay(20);
+    delay(500);
     if (digitalRead(up) == 0)
     {
-      f_set +=0.1; 
-      if (f_set>100)
+      f_set += 0.1; 
+      if (f_set>99.9)
       {
-        f_set = 100;
+        f_set = 99.9;
       } 
     }   
   }
   if (digitalRead(down) == 0)
   {
-    delay(20);
-    if (digitalRead(up) == 0)
+    delay(500);
+    if (digitalRead(down) == 0)
     {
-      f_set -=0.1;
+      f_set -= 0.1;
       if (f_set < 30)
       {
         f_set =30;
@@ -452,6 +626,7 @@ char Back(){
     return sttButton;
 }
 // chay dong co
+/*
 void chay(){
   if (sttMotor == 0)
   {
@@ -460,7 +635,6 @@ void chay(){
   }
   if (f_change<f_set)
   {
-    /* code */
   }
   
 
@@ -477,6 +651,7 @@ void dung(){
   OCR2A = 0;
   OCR2B = 0;
 }
+*/
 // thay doi tan so
 void changeFreq(float _freq){
   cbi (TIMSK2,TOIE2);              // disable timer2 overflow detect   - tắt ngắt timer2 
@@ -585,14 +760,28 @@ ISR(TIMER2_OVF_vect) {
   value1 = pgm_read_byte_near(sine256 + phase0);
   if(value1 > 240)value1 = 240;
   if(value1 < 10) value1 = 10;
+  if (bitThuanNghich == 0)
+  {
+    value2 = pgm_read_byte_near(sine256 + phase2);
+    if(value2 > 240)value2 = 240;
+    if(value2 < 10) value2 = 10;
 
-  value2 = pgm_read_byte_near(sine256 + phase1);
-  if(value2 > 240)value2 = 240;
-  if(value2 < 10) value2 = 10;
+    value3 = pgm_read_byte_near(sine256 + phase1);
+    if(value3 > 240)value3 = 240;
+    if(value3 < 10) value3 = 10;
+  }
+  else
+  {
+    value2 = pgm_read_byte_near(sine256 + phase1);
+    if(value2 > 240)value2 = 240;
+    if(value2 < 10) value2 = 10;
 
-  value3 = pgm_read_byte_near(sine256 + phase2);
-  if(value3 > 240)value3 = 240;
-  if(value3 < 10) value3 = 10;
+    value3 = pgm_read_byte_near(sine256 + phase2);
+    if(value3 > 240)value3 = 240;
+    if(value3 < 10) value3 = 10;
+  }
+
+  
 
   //OCR2A=pgm_read_byte_near(sine256 + phase0)  ;  // pwm pin 11
   //OCR2B=pgm_read_byte_near(sine256 + phase0) + 20;  // pwm pin 3
