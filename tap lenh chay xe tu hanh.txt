@@ -1,0 +1,56 @@
+sửa lỗi xaco:
+param name="robot_description" command="$( find xacro)/xacro.py $(find rùabot3_description)......
+bằng
+param name="robot_description" command="$ ( find xacro)/xacro $(tìm rùabot3_description)......
+
+Dễ dàng thực hiện là tìm và thay thế bằng grep và sed:
+cd ~/catkin_ws/src/turtlebot3_simulations/turtlebot3_gazebo/launch
+grep "xacro.py" -rli | xargs sed -i 's/xacro.py/xacro/g'
+
+them quyen truy cap i2c cho ubuntu
+https://askubuntu.com/questions/1273700/enable-spi-and-i2c-on-ubuntu-20-04-raspberry-pi
+
+su dung them i2c-0:
+https://woodgears.ca/tech/i2c.htmlcd 
+
+sudo groupadd i2c (group may exist already)
+sudo chown :i2c /dev/i2c-1 (or i2c-0)
+sudo chmod g+rw /dev/i2c-1
+sudo usermod -aG i2c *ubuntu*
+i2cdetect -y 1
+
+instal realtime_clock noetic:
+sudo apt install ros-noetic-realtime-tools
+
+/////////////////////////////////////////////////////////////////////
+ (group may exist already)
+
+sudo chown :i2c /dev/i2c-1
+sudo chmod g+rw /dev/i2c-1
+sudo usermod -aG i2c *ubuntu*
+i2cdetect -y 1
+
+sudo chown :i2c /dev/i2c-0 
+sudo chmod g+rw /dev/i2c-0
+sudo usermod -aG i2c *ubuntu*
+i2cdetect -y 0
+
+ls -l /dev | grep ttyUSB
+sudo chmod 666 /dev/ttyUSB0
+
+source /opt/ros/noetic/setup.bash
+roscore
+
+cd ~/catkin_ws/
+
+Then run to source the environment with your current terminal:
+source devel/setup.bash
+
+
+roslaunch rplidar_ros view_rplidar.launch 
+roslaunch mobile_robot_autonomous_navigation controller_check.launch
+rosrun teleop_twist_keyboard teleop_twist_keyboard.py
+roslaunch mobile_robot_autonomous_navigation mapping.launch
+rosrun map_server map_saver -f layout
+roslaunch mobile_robot_autonomous_navigation autonomous_nav.launch
+rosrun mobile_robot_autonomous_navigation send_goal.py

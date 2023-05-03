@@ -1,7 +1,5 @@
 #include <LiquidCrystal_I2C.h>
 
-
-
 // 3 phase PWM sine
 // (c) 2016 C. Masenas
 // Modified from original DDS from: 
