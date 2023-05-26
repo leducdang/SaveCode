@@ -1,3 +1,5 @@
+
+
 #include <LiquidCrystal_I2C.h>
 
 // 3 phase PWM sine
@@ -19,15 +21,15 @@ PROGMEM const unsigned char sine256[]  = {
 LiquidCrystal_I2C lcd(0x27, 20, 4);     //0X27 or 0X3F  
 
 #define start 4
-#define stop  12
+#define stop  7
 #define enter 13
 #define up    8
-#define down  7
+#define down  12
 
 unsigned int value1, value2, value3;    //gia tri cai dat phu
 
 volatile  float freq=1;
-const float refclk=122.549  ;     //  16 MHz/510/256
+const float refclk=61.274  ;     //  16 MHz/510/256
 
 // variables used inside interrupt service declared as voilatile
 volatile unsigned long sigma;   // phase accumulator
@@ -65,7 +67,7 @@ void setup()
   pinMode(enter,INPUT_PULLUP);
   pinMode(up   ,INPUT_PULLUP);
   pinMode(down ,INPUT_PULLUP);
-  pinMode(2, INPUT_PULLUP); //ngắt ngoài tại chân số 2 có trở treo dương ngắt tín hiệu khi ngắn mạch
+  pinMode(2, INPUT); //ngắt ngoài tại chân số 2 có trở treo dương ngắt tín hiệu khi ngắn mạch
 
   Setup_timer2();
   Setup_timer1();
@@ -78,7 +80,7 @@ void setup()
   OCR1B = 0;
   cbi (TIMSK2,TOIE2);               // TẮT NGẮT TIMER 2
 
-  attachInterrupt(0, DungKhan, FALLING );   // tắt phát xung SPWM khi có lỗi xảy ra.
+//  attachInterrupt(0, DungKhan, RISING );   // tắt phát xung SPWM khi có lỗi xảy ra.
 
   lcd.init();
   lcd.backlight();
@@ -280,9 +282,9 @@ void displayControl(){
         timeChange = ( timeTGT * 1000 ) / ( f_set * 10 );                         // thoi gian thay doi ms / 0,1HZ
         sttMotor = 1;
         lcd.clear();
-        Serial.println(timeTGT);
-        Serial.println(f_set);
-        Serial.println(timeChange);
+//        Serial.println(timeTGT);
+//        Serial.println(f_set);
+//        Serial.println(timeChange);
       }   
     }
   if (digitalRead(stop) == 0)
@@ -305,7 +307,7 @@ void displayControl(){
       {
           f_change += 0.1;
           changeFreq(f_change);
-           Serial.println(f_change);
+//           Serial.println(f_change);
        }
        if (f_change > f_set)
        {
@@ -324,7 +326,7 @@ void displayControl(){
        {
           f_change -= 0.1;
           changeFreq(f_change);
-           Serial.println(f_change);
+//           Serial.println(f_change);
        }
        else
        {
@@ -659,7 +661,7 @@ void changeFreq(float _freq){
 } 
 
 //******************************************************************
-
+/*
 void DungKhan()
 {
   cbi (TIMSK2,TOIE2);
@@ -669,8 +671,13 @@ void DungKhan()
   OCR1B = 0;
   OCR2A = 0;
   OCR2B = 0;
+  
+  lcd.setCursor(10,3);
+  lcd.print("Er");
+  sttMotor = 0;
+  bitStop = 1;
   }
-
+*/
 //******************************************************************
 // timer2 setup
 // set prscaler to 1,  fast PWM
@@ -756,45 +763,46 @@ ISR(TIMER2_OVF_vect) {
   phase2 = phase0 +170 ;
 
   value1 = pgm_read_byte_near(sine256 + phase0);
-  if(value1 > 240)value1 = 240;
-  if(value1 < 10) value1 = 10;
+  if(value1 > 195)value1 = 195;
+  if(value1 < 25) value1 = 25;
+
   if (bitThuanNghich == 0)
   {
     value2 = pgm_read_byte_near(sine256 + phase2);
-    if(value2 > 240)value2 = 240;
-    if(value2 < 10) value2 = 10;
+    if(value2 > 195)value2 = 195;
+    if(value2 < 25) value2 = 25;
 
     value3 = pgm_read_byte_near(sine256 + phase1);
-    if(value3 > 240)value3 = 240;
-    if(value3 < 10) value3 = 10;
+    if(value3 > 195)value3 = 195;
+    if(value3 < 25) value3 = 25;
   }
   else
   {
     value2 = pgm_read_byte_near(sine256 + phase1);
-    if(value2 > 240)value2 = 240;
-    if(value2 < 10) value2 = 10;
+    if(value2 > 195)value2 = 195;
+    if(value2 < 25) value2 = 25;
 
     value3 = pgm_read_byte_near(sine256 + phase2);
-    if(value3 > 240)value3 = 240;
-    if(value3 < 10) value3 = 10;
+    if(value3 > 195)value3 = 195;
+    if(value3 < 25) value3 = 25;
   }
 
   
 
   //OCR2A=pgm_read_byte_near(sine256 + phase0)  ;  // pwm pin 11
   //OCR2B=pgm_read_byte_near(sine256 + phase0) + 20;  // pwm pin 3
-  OCR2A = value1;
-  OCR2B = value1 + 10;
+  OCR2A = value1-10;
+  OCR2B = value1 +45;
 
   //OCR1B=pgm_read_byte_near(sine256 + phase1) ;  // pwm pin 10
   //OCR1A=pgm_read_byte_near(sine256 + phase1) ;  // pwm pin 9
-  OCR1A = value2;
-  OCR1B = value2 + 10;
+  OCR1A = value2-10;
+  OCR1B = value2 +45;
 
   //OCR0A=pgm_read_byte_near(sine256 + phase2) ;  // pwm pin 6
   //OCR0B=pgm_read_byte_near(sine256 + phase2) ;  // pwm pin 5
-  OCR0A = value3;
-  OCR0B = value3 + 10;
+  OCR0A = value3-10;
+  OCR0B = value3 + 45;
 
 
   //cbi(PORTD,testPin);            
