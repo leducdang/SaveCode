@@ -29,7 +29,7 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);     //0X27 or 0X3F
 unsigned int value1, value2, value3;    //gia tri cai dat phu
 
 volatile  float freq=1;
-const float refclk=61.274  ;     //  16 MHz/510/256
+const float refclk=61.274  ;     //  8 MHz/510/256      Tan so/so xung trong 1 chu kỳ/so chu ky trong 1 tan so
 
 // variables used inside interrupt service declared as voilatile
 volatile unsigned long sigma;   // phase accumulator
@@ -179,7 +179,7 @@ void displayMain(){
   }
   if (digitalRead(down) == 0 )
     {
-      delay(100);
+      timeBack = millis();
       while (digitalRead(down) == 0 );
       if((unsigned long)millis() - timeBack > 100)
       {
