@@ -31,7 +31,7 @@ unsigned int value1, value2, value3;  //gia tri cai dat phu
  unsigned char constVF;
 
 volatile float freq = 1;
-const float refclk = 15.318;  //  8 MHz/510/256      Tan so/so xung trong 1 chu kỳ/so chu ky trong 1 tan so
+const float refclk = 15.318;  //  16MHz /8/510/256      Tan so/so xung trong 1 chu kỳ/so chu ky trong 1 tan so
 
 // variables used inside interrupt service declared as voilatile
 volatile unsigned long sigma;  // phase accumulator
@@ -39,7 +39,7 @@ volatile unsigned long delta;  // phase increment
 byte phase0, phase1, phase2;
 unsigned int convert_PWM;
 
-float VR_in, F_in, F_out = 0;      // cai tan so theo bien tro  mode 2.
+ float VR_in= 0, F_in= 0, F_out = 0;      // cai tan so theo bien tro  mode 2.
 unsigned long timeMillis = 0;      // thoi gian delay khong dung
 unsigned char bitThuanNghich = 0;  // 0 quay thuan,1 quay nghich.
 unsigned char bitChayDung = 0;     // 1 chay 0 dung
@@ -85,6 +85,7 @@ void setup() {
   //  attachInterrupt(0, DungKhan, RISING );   // tắt phát xung SPWM khi có lỗi xảy ra.
 
   lcd.init();
+  delay(2000);
   lcd.backlight();
   lcd.setCursor(0, 0);
   lcd.print("Module Mach Bien Tan");
@@ -349,16 +350,26 @@ void displayControl() {
     }
   }
 }
-//Mode 1: su dung bien tro
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+//Mode 1: su dung bien tro//////////////////////////////////////////////////////////////////////////////////
 void ChangeVR() {
-  if (((unsigned long)millis() - timeMillis) > 500) {
+  if (((unsigned long)millis() - timeMillis) > 200) {
     //lcd.clear();
     lcd.setCursor(1, 0);
     lcd.print("MODE 2: DUNG VR ");
     lcd.setCursor(1, 2);
-    lcd.print("F:");
-    lcd.setCursor(11, 2);
+    lcd.print("Fs:");
+    lcd.setCursor(4, 2);
     lcd.print(F_in);
+    lcd.setCursor(13, 2);
+    lcd.print("F:");
+    lcd.setCursor(15, 2);
+    lcd.print(F_out);
     lcd.setCursor(1, 3);
     if (sttMotor == 0) {
       lcd.print("Stop");
@@ -370,21 +381,23 @@ void ChangeVR() {
   VR_in = analogRead(A0);
   F_in = map(VR_in, 0, 1023, 0, 100);
 
+
   //NOTE: tan so se thay doi lien tuc
   if (digitalRead(start) == 0) {
     timeBack = millis();
-    while (digitalRead(start) == 0)
-      ;
+    while (digitalRead(start) == 0);
+
     if ((unsigned long)millis() - timeBack > 200) {
       sttMotor = 1;
       timeChange = (timeTGT * 1000) / (F_in * 10);  // thoi gian ms/0,1 HZ
+//      Serial.println(timeChange);
       lcd.clear();
     }
   }
   if (digitalRead(stop) == 0) {
     timeBack = millis();
-    while (digitalRead(stop) == 0)
-      ;
+    while (digitalRead(stop) == 0);
+
     if ((unsigned long)millis() - timeBack > 200) {
       sttMotor = 0;
       bitStop = 1;
@@ -393,23 +406,24 @@ void ChangeVR() {
   }
 
   if (sttMotor == 1) {
-    if ((unsigned long)millis() - timeCTMotor > timeChange) {
+    if ((unsigned long)millis() - timeCTMotor > timeChange) 
+    {
       if (F_out < F_in) {
-        F_out += 0, 1;
-        /*if ((F_out > 0) && (F_out < 50)) {
-          constVF = map(F_out, 0, 49, 0.1, 0.99);
+        F_out += 0.1;
+        if ((F_out > 0) && (F_out < 50)) {
+          constVF = map(F_out, 0, 49, 2, 9);
         } else {
-          constVF = 1;
-        }*/
+          constVF = 10;
+        }
         changeFreq(F_out);
       }
       if (F_out > F_in) {
-        F_out -= 0, 1;
-        /*if ((F_out > 0) && (F_out < 50)) {
-          constVF = map(F_out, 0, 49, 0.1, 0.99);
+        F_out -= 0.1;
+        if ((F_out > 0) && (F_out < 50)) {
+          constVF = map(F_out, 0, 49, 2, 9);
         } else {
-          constVF = 1;
-        }*/
+          constVF = 10;
+        }
         changeFreq(F_out);
       }
       timeCTMotor = millis();
@@ -417,9 +431,14 @@ void ChangeVR() {
   }
   if (bitStop == 1 && sttMotor == 0) {
     /* code */
-    if ((unsigned long)millis() - timeCTMotor > timeChange) {
-      if (F_out > 10) {
-        F_out -= 0, 1;
+    if ((unsigned long)millis() - timeCTMotor > timeChange) 
+    {
+      if (F_out > 0) {
+        F_out -= 0.1;
+         if ((F_out > 0) && (F_out < 50)) 
+        {
+          constVF = map(F_out, 0, 49, 0, 9);       
+        }
         changeFreq(F_out);
       } else {
         cbi(TIMSK2, TOIE2);
@@ -448,7 +467,13 @@ void ChangeVR() {
     }
   }
 }
-//Mode 2: set thoi gian tang giam toc
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+//Mode 2: set thoi gian tang giam toc //////////////////////////////////////////////////////////////////////////////////////////////////
 void TGTangGiamToc() {
   if (((unsigned long)millis() - timeMillis) > 200) {
     lcd.setCursor(1, 0);
