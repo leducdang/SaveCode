@@ -27,10 +27,11 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);  //0X27 or 0X3F
 #define down 12
 
 unsigned int value1, value2, value3;  //gia tri cai dat phu
-unsigned int constVF;
+// float constVF[] = {0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1};
+ unsigned char constVF;
 
 volatile float freq = 1;
-const float refclk = 61.274;  //  8 MHz/510/256      Tan so/so xung trong 1 chu kỳ/so chu ky trong 1 tan so
+const float refclk = 15.318;  //  8 MHz/510/256      Tan so/so xung trong 1 chu kỳ/so chu ky trong 1 tan so
 
 // variables used inside interrupt service declared as voilatile
 volatile unsigned long sigma;  // phase accumulator
@@ -259,21 +260,18 @@ void displayControl() {
 
   if (digitalRead(start) == 0) {
     timeBack = millis();
-    while (digitalRead(start) == 0)
-      ;
+    while (digitalRead(start) == 0);
+
     if ((unsigned long)millis() - timeBack > 200) {
       timeChange = (timeTGT * 1000) / (f_set * 10);  // thoi gian thay doi ms / 0,1HZ
       sttMotor = 1;
       lcd.clear();
-      //        Serial.println(timeTGT);
-      //        Serial.println(f_set);
-      //        Serial.println(timeChange);
     }
   }
   if (digitalRead(stop) == 0) {
     timeBack = millis();
-    while (digitalRead(stop) == 0)
-      ;
+    while (digitalRead(stop) == 0);
+
     if ((unsigned long)millis() - timeBack > 200) {
       sttMotor = 0;
       bitStop = 1;
@@ -285,26 +283,27 @@ void displayControl() {
     if (((unsigned long)millis() - timeCTMotor) > timeChange) {
       if (f_change < f_set) {
         f_change += 0.1;
-        if ((f_change > 0) && (f_change < 50)) {
-          constVF = map(f_change, 0, 49, 1, 99);
-          //Serial.print("CONST V/F: ");
-          //Serial.println(constVF);
-          //convert_PWM = (149)*constVF/100;
-          //Serial.println(convert_PWM);
-        } else {
-          constVF = 1;
+        if ((f_change > 0) && (f_change < 50)) 
+        {
+          constVF = map(f_change, 0, 49, 0, 9);
+        } 
+        else 
+        {
+          constVF = 10;
         }
         changeFreq(f_change);
         //           Serial.println(f_change);
       }
       if (f_change > f_set) {
         f_change -= 0.1;
-        if ((f_change > 0) && (f_change < 50)) {
-          constVF = map(f_change, 0, 49, 0.1, 0.99);
-          //Serial.println("CONST V/F: ");
-          //Serial.println(constVF);
-        } else {
-          constVF = 1;
+        if ((f_change > 0) && (f_change < 50)) 
+        {
+          constVF = map(f_change, 0, 49, 0, 9);
+        
+        } 
+        else
+        {
+          constVF = 10;
         }
         changeFreq(f_change);
       }
@@ -316,9 +315,14 @@ void displayControl() {
     if (((unsigned long)millis() - timeCTMotor) > timeChange) {
       if (f_change > 0) {
         f_change -= 0.1;
-        changeFreq(f_change);
-        //           Serial.println(f_change);
-      } else {
+         if ((f_change > 0) && (f_change < 50)) 
+        {
+          constVF = map(f_change, 0, 49, 0, 9);
+        
+        }
+        changeFreq(f_change); 
+      } 
+      else {
         cbi(TIMSK2, TOIE2);
         OCR0A = 0;
         OCR0B = 0;
@@ -392,20 +396,20 @@ void ChangeVR() {
     if ((unsigned long)millis() - timeCTMotor > timeChange) {
       if (F_out < F_in) {
         F_out += 0, 1;
-        if ((F_out > 0) && (F_out < 50)) {
+        /*if ((F_out > 0) && (F_out < 50)) {
           constVF = map(F_out, 0, 49, 0.1, 0.99);
         } else {
           constVF = 1;
-        }
+        }*/
         changeFreq(F_out);
       }
       if (F_out > F_in) {
         F_out -= 0, 1;
-        if ((F_out > 0) && (F_out < 50)) {
+        /*if ((F_out > 0) && (F_out < 50)) {
           constVF = map(F_out, 0, 49, 0.1, 0.99);
         } else {
           constVF = 1;
-        }
+        }*/
         changeFreq(F_out);
       }
       timeCTMotor = millis();
@@ -576,34 +580,7 @@ char Back() {
   }
   return sttButton;
 }
-// chay dong co
-/*
-void chay(){
-  if (sttMotor == 0)
-  {
-    timeChange = timeTGT / (f_set*10);
-    sttMotor = 1 ;
-  }
-  if (f_change<f_set)
-  {
-  }
-  
 
-  
-  sbi (TIMSK2,TOIE2);
-}
-// stop dong co
-void dung(){
-  cbi (TIMSK2,TOIE2);
-  OCR0A = 0;
-  OCR0B = 0;
-  OCR1A = 0;
-  OCR1B = 0;
-  OCR2A = 0;
-  OCR2B = 0;
-}
-*/
-// thay doi tan so
 void changeFreq(float _freq) {
   cbi(TIMSK2, TOIE2);  // disable timer2 overflow detect   - tắt ngắt timer2
   freq = _freq;
@@ -611,32 +588,15 @@ void changeFreq(float _freq) {
   sbi(TIMSK2, TOIE2);                   // enable timer2 overflow detect     - bật ngắt timer 2
 }
 
-//******************************************************************
-/*
-void DungKhan()
-{
-  cbi (TIMSK2,TOIE2);
-  OCR0A = 0;
-  OCR0B = 0;
-  OCR1A = 0;
-  OCR1B = 0;
-  OCR2A = 0;
-  OCR2B = 0;
-  
-  lcd.setCursor(10,3);
-  lcd.print("Er");
-  sttMotor = 0;
-  bitStop = 1;
-  }
-*/
+
 //******************************************************************
 // timer2 setup
 // set prscaler to 1,  fast PWM
 void Setup_timer2() {
 
-  // Timer2 Clock Prescaler to : 1
-  sbi(TCCR2B, CS20);  // set
-  cbi(TCCR2B, CS21);  // clear
+  // Timer2 Clock Prescaler to : 8
+  cbi(TCCR2B, CS20);  // set
+  sbi(TCCR2B, CS21);  // clear
   cbi(TCCR2B, CS22);
 
   // Timer2 PWM Mode
@@ -656,8 +616,8 @@ void Setup_timer2() {
 // set prscaler to 1, PWM mode to phase correct PWM,  16000000/510 = 31372.55 Hz clock
 void Setup_timer1() {
   // Timer1 Clock Prescaler to : 1
-  sbi(TCCR1B, CS10);
-  cbi(TCCR1B, CS11);
+  cbi(TCCR1B, CS10);
+  sbi(TCCR1B, CS11);
   cbi(TCCR1B, CS12);
   // Timer1 PWM Mode set to Phase Correct PWM
   cbi(TCCR1A, COM1A0);  // clear OC1A on Compare Match, PWM pin 9
@@ -675,8 +635,8 @@ void Setup_timer1() {
 void Setup_timer0() {
 
   // Timer0 Clock Prescaler to : 1
-  sbi(TCCR0B, CS00);  // set
-  cbi(TCCR0B, CS01);  // clear
+  cbi(TCCR0B, CS00);  // set
+  sbi(TCCR0B, CS01);  // clear
   cbi(TCCR0B, CS02);
 
   // Timer0 PWM Mode
@@ -711,47 +671,47 @@ ISR(TIMER2_OVF_vect) {
   phase1 = phase0 + 85;
   phase2 = phase0 + 170;
 
-  value1 = pgm_read_byte_near(sine256 + phase0)*7/10;
-  if (value1 > 205) value1 = 205;
-  if (value1 < 25) value1 = 25;
+  value1 = pgm_read_byte_near(sine256 + phase0)*constVF/10;
+  if (value1 > 235) value1 = 235;
+  if (value1 < 15) value1 = 15;
 
-/*  if (bitThuanNghich == 0) {
-    value2 = pgm_read_byte_near(sine256 + phase2);
-    if (value2 > 205) value2 = 205;
-    if (value2 < 25) value2 = 25;
+  if (bitThuanNghich == 0) {
+    value2 = pgm_read_byte_near(sine256 + phase2)*constVF/10;
+    if (value2 > 235) value2 = 235;
+    if (value2 < 15) value2 = 15;
 
-    value3 = pgm_read_byte_near(sine256 + phase1);
-    if (value3 > 205) value3 = 205;
-    if (value3 < 25) value3 = 25;
+    value3 = pgm_read_byte_near(sine256 + phase1)*constVF/10;
+    if (value3 > 235) value3 = 235;
+    if (value3 < 15) value3 = 15;
   } 
   else {
-    value2 = pgm_read_byte_near(sine256 + phase1);
-    if (value2 > 205) value2 = 205;
-    if (value2 < 25) value2 = 25;
+    value2 = pgm_read_byte_near(sine256 + phase1)*constVF/10;
+    if (value2 > 235) value2 = 235;
+    if (value2 < 15) value2 = 15;
 
-    value3 = pgm_read_byte_near(sine256 + phase2);
-    if (value3 > 205) value3 = 205;
-    if (value3 < 25) value3 = 25;
-  }*/
+    value3 = pgm_read_byte_near(sine256 + phase2)*constVF/10;
+    if (value3 > 235) value3 = 235;
+    if (value3 < 15) value3 = 15;
+  }
 
 
 
   //OCR2A=pgm_read_byte_near(sine256 + phase0)  ;  // pwm pin 11
   //OCR2B=pgm_read_byte_near(sine256 + phase0) + 20;  // pwm pin 3
 
-  OCR2A = value1 - 10 ;
-  OCR2B = value1 + 35 ;
+  OCR2A = value1 - 5 ;
+  OCR2B = value1 + 10 ;
 
 
   //OCR1B=pgm_read_byte_near(sine256 + phase1) ;  // pwm pin 10
   //OCR1A=pgm_read_byte_near(sine256 + phase1) ;  // pwm pin 9
- // OCR1A = value2 - 10 ;
- // OCR1B = value2 + 35 ;
+  OCR1A = value2 - 5 ;
+  OCR1B = value2 + 10 ;
 
   //OCR0A=pgm_read_byte_near(sine256 + phase2) ;  // pwm pin 6
   //OCR0B=pgm_read_byte_near(sine256 + phase2) ;  // pwm pin 5
- // OCR0A = value3 - 10;
- // OCR0B = value3 + 35;
+  OCR0A = value3 - 5;
+  OCR0B = value3 + 10;
 
 
   //cbi(PORTD,testPin);
