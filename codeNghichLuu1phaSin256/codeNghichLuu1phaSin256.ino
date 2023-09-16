@@ -1,33 +1,33 @@
 #include <LiquidCrystal_I2C.h>
 
 PROGMEM const unsigned char sine256[] = {
-0,6,12,19,25,31,37,43,50,56,
-62,68,74,80,86,91,97,103,109,114,
-120,125,131,136,141,146,151,156,161,166,
-171,175,180,184,188,192,196,200,204,208,
-211,215,218,221,224,227,230,232,235,237,
-239,241,243,245,246,248,249,250,251,252,
-253,253,254,254,254,254,254,253,253,252,
-251,250,249,248,246,245,243,241,239,237,
-235,232,230,227,224,221,218,215,211,208,
-204,200,196,192,188,184,180,175,171,166,
-161,156,151,146,141,136,131,125,120,114,
-109,103,97,91,86,80,74,68,62,56,
-50,43,37,31,25,19,12,6,
+  0, 6, 12, 19, 25, 31, 37, 43, 50, 56,
+  62, 68, 74, 80, 86, 91, 97, 103, 109, 114,
+  120, 125, 131, 136, 141, 146, 151, 156, 161, 166,
+  171, 175, 180, 184, 188, 192, 196, 200, 204, 208,
+  211, 215, 218, 221, 224, 227, 230, 232, 235, 237,
+  239, 241, 243, 245, 246, 248, 249, 250, 251, 252,
+  253, 253, 254, 254, 254, 254, 254, 253, 253, 252,
+  251, 250, 249, 248, 246, 245, 243, 241, 239, 237,
+  235, 232, 230, 227, 224, 221, 218, 215, 211, 208,
+  204, 200, 196, 192, 188, 184, 180, 175, 171, 166,
+  161, 156, 151, 146, 141, 136, 131, 125, 120, 114,
+  109, 103, 97, 91, 86, 80, 74, 68, 62, 56,
+  50, 43, 37, 31, 25, 19, 12, 6,
 
-0,6,12,19,25,31,37,43,50,56,
-62,68,74,80,86,91,97,103,109,114,
-120,125,131,136,141,146,151,156,161,166,
-171,175,180,184,188,192,196,200,204,208,
-211,215,218,221,224,227,230,232,235,237,
-239,241,243,245,246,248,249,250,251,252,
-253,253,254,254,254,254,254,253,253,252,
-251,250,249,248,246,245,243,241,239,237,
-235,232,230,227,224,221,218,215,211,208,
-204,200,196,192,188,184,180,175,171,166,
-161,156,151,146,141,136,131,125,120,114,
-109,103,97,91,86,80,74,68,62,56,
-50,43,37,31,25,19,12,6
+  0, 6, 12, 19, 25, 31, 37, 43, 50, 56,
+  62, 68, 74, 80, 86, 91, 97, 103, 109, 114,
+  120, 125, 131, 136, 141, 146, 151, 156, 161, 166,
+  171, 175, 180, 184, 188, 192, 196, 200, 204, 208,
+  211, 215, 218, 221, 224, 227, 230, 232, 235, 237,
+  239, 241, 243, 245, 246, 248, 249, 250, 251, 252,
+  253, 253, 254, 254, 254, 254, 254, 253, 253, 252,
+  251, 250, 249, 248, 246, 245, 243, 241, 239, 237,
+  235, 232, 230, 227, 224, 221, 218, 215, 211, 208,
+  204, 200, 196, 192, 188, 184, 180, 175, 171, 166,
+  161, 156, 151, 146, 141, 136, 131, 125, 120, 114,
+  109, 103, 97, 91, 86, 80, 74, 68, 62, 56,
+  50, 43, 37, 31, 25, 19, 12, 6
 
 };
 /*
@@ -63,7 +63,7 @@ PROGMEM const unsigned char sine256[] = {
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 
-LiquidCrystal_I2C lcd(0x27, 16, 2);  //0X3F
+// LiquidCrystal_I2C lcd(0x27, 16, 2);  //0X3F
 
 #define start 2
 #define stop 3
@@ -77,17 +77,17 @@ unsigned int value1;
 
 unsigned int VR_in, F_in, F_out = 0, valueVR;
 unsigned long timeMillis = 0;
-unsigned long timeDelay = 0, timeButton1 = 0,timeButton2 = 0;
-char bitStart = 0; 
+unsigned long timeDelay = 0, timeButton1 = 0, timeButton2 = 0;
+char bitStart = 0;
 
 void setup() {
-  Serial.begin(9600);  
+  Serial.begin(9600);
 
   pinMode(9, OUTPUT);   // pin9= PWM  output / frequency output
   pinMode(10, OUTPUT);  // pin10= PWM  output / frequency output
   pinMode(11, OUTPUT);  // pin11= PWM  output / frequency output
-  pinMode(6, OUTPUT);  // pin6= PWM  output / frequency output
-  pinMode(5, OUTPUT);  // pin5= PWM  output / frequency output
+  pinMode(6, OUTPUT);   // pin6= PWM  output / frequency output
+  pinMode(5, OUTPUT);   // pin5= PWM  output / frequency output
   pinMode(start, INPUT_PULLUP);
   pinMode(stop, INPUT_PULLUP);
 
@@ -95,12 +95,12 @@ void setup() {
   Setup_timer1();
   Setup_timer0();
   cbi(TIMSK2, TOIE2);
-  lcd.init();
-  lcd.backlight();
-  lcd.setCursor(2, 0);
-  lcd.print("TAN SO CAI DAT");
-  lcd.setCursor(5, 1);
-  lcd.print("Hz");
+  // lcd.init();
+  // lcd.backlight();
+  // lcd.setCursor(2, 0);
+  // lcd.print("TAN SO CAI DAT");
+  // lcd.setCursor(5, 1);
+  // lcd.print("Hz");
 
 
   // the waveform index is the highest 8 bits of sigma
@@ -119,58 +119,52 @@ void loop() {
 
 
 
-    if((unsigned long)millis() - timeDelay > 200)
-    {
-      VR_in = analogRead(A0);
-      F_in = map(VR_in, 0, 1023, 0, 100);
-      valueVR = analogRead(A0); 
-      F_in = map( valueVR, 0, 1023, 0, 99);  
-      lcd.setCursor(2,0);
-      lcd.print("TAN SO CAI DAT");
-      lcd.setCursor(5,1);
-      lcd.print("Hz");
-      lcd.setCursor(1,1); 
-      lcd.print(F_in); 
+  if ((unsigned long)millis() - timeDelay > 200) {
+    VR_in = analogRead(A0);
+    F_in = map(VR_in, 0, 1023, 0, 100);
+    valueVR = analogRead(A0);
+    F_in = map(valueVR, 0, 1023, 0, 99);
+    // lcd.setCursor(2, 0);
+    // lcd.print("TAN SO CAI DAT");
+    // lcd.setCursor(5, 1);
+    // lcd.print("Hz");
+    // lcd.setCursor(1, 1);
+    // lcd.print(F_in);
+  }
+  if (bitStart == 1) {
+    if (F_in != F_out) {
+      F_out = F_in;
+      changeFreq(F_out);
     }
-     if(bitStart == 1)
-    {
-      if( F_in != F_out)
-      {
-        F_out = F_in;
-        changeFreq(F_out);
-      }
-    }
+  }
 
-    if(bitStart == 0)
-    {
-      TIMSK2 = 0b00000000;
-      OCR1A = 0;
-      OCR1B = 0;
-      OCR0A = 0;
-      OCR0B = 0;
-      }
+  if (bitStart == 0) {
+    TIMSK2 = 0b00000000;
+    OCR1A = 0;
+    OCR1B = 0;
+    OCR0A = 0;
+    OCR0B = 0;
+  }
 
-      if(digitalRead(start) == 0 )
-    {
-      timeButton1 = millis();
-      while (digitalRead(start) == 0);
-      if ((unsigned long) millis() - timeButton1 > 100)
-      {
-        bitStart = 1;
-        F_out = F_in;
-       changeFreq(F_out);
-      }    
+  if (digitalRead(start) == 0) {
+    timeButton1 = millis();
+    while (digitalRead(start) == 0)
+      ;
+    if ((unsigned long)millis() - timeButton1 > 100) {
+      bitStart = 1;
+      F_out = F_in;
+      changeFreq(F_out);
     }
+  }
 
-        if(digitalRead(stop) == 0 )
-    {
-      timeButton2 = millis();
-      while (digitalRead(stop) == 0);
-      if ((unsigned long) millis() - timeButton2 > 100)
-      {
-        bitStart = 0;
-      }   
+  if (digitalRead(stop) == 0) {
+    timeButton2 = millis();
+    while (digitalRead(stop) == 0)
+      ;
+    if ((unsigned long)millis() - timeButton2 > 100) {
+      bitStart = 0;
     }
+  }
 }
 
 
@@ -224,19 +218,19 @@ void Setup_timer2() {
 // set prscaler to 1, PWM mode to phase correct PWM,  16000000/510 = 31372.55 Hz clock
 void Setup_timer1() {
 
-  sbi (TCCR1B, CS10);
-  cbi (TCCR1B, CS11);
-  cbi (TCCR1B, CS12);
+  sbi(TCCR1B, CS10);
+  cbi(TCCR1B, CS11);
+  cbi(TCCR1B, CS12);
   // Timer1 PWM Mode set to Phase Correct PWM
-  cbi (TCCR1A, COM1A0);  // clear OC1A on Compare Match, PWM pin 9
-  sbi (TCCR1A, COM1A1);
-  sbi (TCCR1A, COM1B0);  // clear OC1B on Compare Match, PWM pin 10
-  sbi (TCCR1A, COM1B1);
+  cbi(TCCR1A, COM1A0);  // clear OC1A on Compare Match, PWM pin 9
+  sbi(TCCR1A, COM1A1);
+  cbi(TCCR1A, COM1B0);  // clear OC1B on Compare Match, PWM pin 10
+  sbi(TCCR1A, COM1B1);
 
-  sbi (TCCR1A, WGM10);  // Mode 1  / phase correct PWM
-  cbi (TCCR1A, WGM11);
-  cbi (TCCR1B, WGM12);
-  cbi (TCCR1B, WGM13);
+  sbi(TCCR1A, WGM10);  // Mode 1  / phase correct PWM
+  cbi(TCCR1A, WGM11);
+  cbi(TCCR1B, WGM12);
+  cbi(TCCR1B, WGM13);
 }
 
 
@@ -252,7 +246,7 @@ void Setup_timer0() {
   // Timer0 PWM Mode
   cbi(TCCR0A, COM0A0);  // clear OC2A on Compare Match, PWM pin 11
   sbi(TCCR0A, COM0A1);
-  sbi(TCCR0A, COM0B0);
+  cbi(TCCR0A, COM0B0);
   sbi(TCCR0A, COM0B1);
 
 
@@ -280,9 +274,9 @@ ISR(TIMER2_OVF_vect) {
   sigma = sigma + delta;  // soft DDS, phase accu with 32 bits
   phase0 = sigma >> 24;   // use upper 8 bits for phase accu as frequency information
                           // read value fron ROM sine table and send to PWM DAC
-//  phase1 = phase0 + 85;
-// phase2 = phase0 + 170;
-/*
+                          //  phase1 = phase0 + 85;
+                          // phase2 = phase0 + 170;
+                          /*
   value1 = pgm_read_byte_near(sine256 + phase0);
   if (value1 > 195) value1 = 195;
   if (value1 < 25) value1 = 25;
@@ -297,28 +291,25 @@ ISR(TIMER2_OVF_vect) {
 */
 
   ///--------------------------------------//
-  if(phase0<128)
-  {
-  value1 = pgm_read_byte_near(sine256 + phase0);
-  if (value1 > 250) value1 = 250;
-  if (value1 < 4) value1 = 4;
-  OCR1A = 0;
-  OCR1B = 0;
-  OCR0A = value1-2;
-  OCR0B = value1 + 2;
+  if (phase0 < 128) {
+    value1 = pgm_read_byte_near(sine256 + phase0);
+    // if (value1 > 250) value1 = 250;
+    // if (value1 < 4) value1 = 4;
+    OCR1A = 0;
+    OCR1B = 0;
+    OCR0A = value1;
+    OCR0B = value1;
+  } else if (phase0 > 127) {
+    value1 = pgm_read_byte_near(sine256 + phase0);
+    // if (value1 > 250) value1 = 250;
+    // if (value1 < 4) value1 = 4;
+    OCR0A = 0;
+    OCR0B = 0;
+    OCR1A = value1;
+    OCR1B = value1;
   }
-  else if (phase0>127)
-  {
-  value1 = pgm_read_byte_near(sine256 + phase0);
-  if (value1 > 250) value1 = 250;
-  if (value1 < 4) value1 = 4;
-  OCR0A = 0;
-  OCR0B = 0;
-  OCR1A = value1-2;
-  OCR1B = value1 + 2;
-  }
-  
-/*
+
+  /*
     if(phase0<128)
   {
   value1 = pgm_read_byte_near(sine256 + phase0);
@@ -338,59 +329,3 @@ ISR(TIMER2_OVF_vect) {
   OCR1B = value1;
   }*/
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
