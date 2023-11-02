@@ -1,3 +1,23 @@
+sudo apt install ros-move-base-msgs
+sudo apt install ros-noetic-map-server
+sudo apt install ros-noetic-amcl
+sudo apt install ros-noetic-move-base
+sudo apt-get install ros-noetic-gmapping
+
+install raspi-config on ubuntu
+wget https://archive.raspberrypi.org/debian/pool/main/r/raspi-config/raspi-config_20200601_all.deb -P /tmp
+sudo apt-get install libnewt0.52 whiptail parted triggerhappy lua5.1 alsa-utils -y
+# Auto install dependancies on eg. ubuntu server on RPI
+sudo apt-get install -fy
+sudo dpkg -i /tmp/raspi-config_20200601_all.deb
+
+
+tai sudo git clone https://github.com/ros-planning/navigation.git
+thay the cho tat ca
+
+sudo apt install i2c-tools
+
+
 sửa lỗi xaco:
 param name="robot_description" command="$( find xacro)/xacro.py $(find rùabot3_description)......
 bằng

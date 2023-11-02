@@ -1,5 +1,5 @@
 #include <LiquidCrystal_I2C.h>
-
+/*
 PROGMEM const unsigned char sine256[] = {
   0, 6, 12, 19, 25, 31, 37, 43, 50, 56,
   62, 68, 74, 80, 86, 91, 97, 103, 109, 114,
@@ -30,6 +30,14 @@ PROGMEM const unsigned char sine256[] = {
   50, 43, 37, 31, 25, 19, 12, 6
 
 };
+*/
+
+PROGMEM const unsigned char sine256[] = {
+  0,6,12,18,25,31,37,43,49,55,61,67,73,78,84,90,96,101,107,112,118,123,129,134,139,144,149,154,159,163,168,172,177,181,185,189,193,197,201,204,208,211,214,218,220,223,226,229,231,233,235,237,239,241,243,244,245,246,247,248,249,249,250,252,254,252,250,249,249,248,247,246,245,244,243,241,239,237,235,233,231,229,226,223,220,218,214,211,208,204,201,197,193,189,185,181,177,172,168,163,159,154,149,144,139,134,129,123,118,112,107,101,96,90,84,78,73,67,61,55,49,43,37,31,25,18,12,6,
+  0,6,12,18,25,31,37,43,49,55,61,67,73,78,84,90,96,101,107,112,118,123,129,134,139,144,149,154,159,163,168,172,177,181,185,189,193,197,201,204,208,211,214,218,220,223,226,229,231,233,235,237,239,241,243,244,245,246,247,248,249,249,250,252,254,252,250,249,249,248,247,246,245,244,243,241,239,237,235,233,231,229,226,223,220,218,214,211,208,204,201,197,193,189,185,181,177,172,168,163,159,154,149,144,139,134,129,123,118,112,107,101,96,90,84,78,73,67,61,55,49,43,37,31,25,18,12,6,
+};
+
+
 /*
 PROGMEM const unsigned char sine256[] = {
   127, 130, 133, 136, 139, 143, 146, 149, 152, 155,
@@ -63,13 +71,13 @@ PROGMEM const unsigned char sine256[] = {
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 
-// LiquidCrystal_I2C lcd(0x27, 16, 2);  //0X3F
+LiquidCrystal_I2C lcd(0x27, 16, 2);  //0X3F,0x27
 
 #define start 2
 #define stop 3
 void Setup_timer1();
 volatile float freq = 1;
-const float refclk = 122.549;  //  16 MHz/510/256
+const float refclk = 30.517;  //122.549;  //  16 MHz/510/256
 volatile unsigned long sigma;  // phase accumulator
 volatile unsigned long delta;  // phase increment
 byte phase0;
@@ -79,7 +87,7 @@ unsigned int VR_in, F_in, F_out = 0, valueVR;
 unsigned long timeMillis = 0;
 unsigned long timeDelay = 0, timeButton1 = 0, timeButton2 = 0;
 char bitStart = 0;
-
+bool status = true;
 void setup() {
   Serial.begin(9600);
 
@@ -91,23 +99,25 @@ void setup() {
   pinMode(start, INPUT_PULLUP);
   pinMode(stop, INPUT_PULLUP);
 
+  delta = (1LL << 24) * freq / refclk;
+
   Setup_timer2();
   Setup_timer1();
   Setup_timer0();
   cbi(TIMSK2, TOIE2);
-  // lcd.init();
-  // lcd.backlight();
-  // lcd.setCursor(2, 0);
-  // lcd.print("TAN SO CAI DAT");
-  // lcd.setCursor(5, 1);
-  // lcd.print("Hz");
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(2, 0);
+  lcd.print("TAN SO CAI DAT");
+  lcd.setCursor(5, 1);
+  lcd.print("Hz");
 
 
   // the waveform index is the highest 8 bits of sigma
   // choose refclk as freq to increment the lsb of the 8 highest bits
   //    for every call to the ISR of timer2 overflow
   // the lsb of the 8 highest bits is 1<<24 (1LL<<24 for long integer literal)
-  delta = (1LL << 24) * freq / refclk;
+  
 }
 
 void loop() {
@@ -124,12 +134,12 @@ void loop() {
     F_in = map(VR_in, 0, 1023, 0, 100);
     valueVR = analogRead(A0);
     F_in = map(valueVR, 0, 1023, 0, 99);
-    // lcd.setCursor(2, 0);
-    // lcd.print("TAN SO CAI DAT");
-    // lcd.setCursor(5, 1);
-    // lcd.print("Hz");
-    // lcd.setCursor(1, 1);
-    // lcd.print(F_in);
+    lcd.setCursor(2, 0);
+    lcd.print("TAN SO CAI DAT");
+    lcd.setCursor(5, 1);
+    lcd.print("Hz");
+    lcd.setCursor(1, 1);
+    lcd.print(F_in);
   }
   if (bitStart == 1) {
     if (F_in != F_out) {
@@ -197,19 +207,19 @@ void changeFreq(float _freq) {
 void Setup_timer2() {
 
   // Timer2 Clock Prescaler to : 8
-  sbi(TCCR2B, CS20);  // set
-  cbi(TCCR2B, CS21);  // clear
+  cbi(TCCR2B, CS20);  // set
+  sbi(TCCR2B, CS21);  // clear
   cbi(TCCR2B, CS22);
 
   // Timer2 PWM Mode
   cbi(TCCR2A, COM2A0);  // clear OC2A on Compare Match, PWM pin 11
   sbi(TCCR2A, COM2A1);
-  sbi(TCCR2A, COM2B0);
+  cbi(TCCR2A, COM2B0);
   sbi(TCCR2A, COM2B1);
 
   // set to fast PWM
   sbi(TCCR2A, WGM20);  // Mode 1, phase correct PWM
-  cbi(TCCR2A, WGM21);
+  sbi(TCCR2A, WGM21);
   cbi(TCCR2B, WGM22);
 
   sbi(TIMSK2, TOIE2);  // enable overflow detect
@@ -218,8 +228,8 @@ void Setup_timer2() {
 // set prscaler to 1, PWM mode to phase correct PWM,  16000000/510 = 31372.55 Hz clock
 void Setup_timer1() {
 
-  sbi(TCCR1B, CS10);
-  cbi(TCCR1B, CS11);
+  cbi(TCCR1B, CS10);
+  sbi(TCCR1B, CS11);
   cbi(TCCR1B, CS12);
   // Timer1 PWM Mode set to Phase Correct PWM
   cbi(TCCR1A, COM1A0);  // clear OC1A on Compare Match, PWM pin 9
@@ -239,8 +249,8 @@ void Setup_timer1() {
 void Setup_timer0() {
 
   // Timer0 Clock Prescaler to : 8
-  sbi(TCCR0B, CS00);  // set
-  cbi(TCCR0B, CS01);  // clear
+  cbi(TCCR0B, CS00);  // set
+  sbi(TCCR0B, CS01);  // clear
   cbi(TCCR0B, CS02);
 
   // Timer0 PWM Mode
@@ -252,7 +262,7 @@ void Setup_timer0() {
 
   // set to fast PWM
   sbi(TCCR0A, WGM00);  // Mode 1, phase correct PWM
-  cbi(TCCR0A, WGM01);
+  sbi(TCCR0A, WGM01);
   cbi(TCCR0B, WGM02);
 }
 
@@ -270,6 +280,11 @@ void Setup_timer0() {
 ISR(TIMER2_OVF_vect) {
 
   //sbi(PORTD,testPin);
+  // digitalWrite(5,LOW);
+  // digitalWrite(6,LOW);
+  // digitalWrite(9,LOW);
+  // digitalWrite(10,LOW);
+  
 
   sigma = sigma + delta;  // soft DDS, phase accu with 32 bits
   phase0 = sigma >> 24;   // use upper 8 bits for phase accu as frequency information
@@ -291,20 +306,53 @@ ISR(TIMER2_OVF_vect) {
 */
 
   ///--------------------------------------//
-  if (phase0 < 128) {
-    value1 = pgm_read_byte_near(sine256 + phase0);
+  if (phase0 < 127) {
+   //
     // if (value1 > 250) value1 = 250;
     // if (value1 < 4) value1 = 4;
+    if(status)
+    {
     OCR1A = 0;
     OCR1B = 0;
+
+    cbi(TCCR0A, COM0A0);  // clear OC2A on Compare Match, PWM pin 11
+    sbi(TCCR0A, COM0A1);
+    cbi(TCCR0A, COM0B0);
+    sbi(TCCR0A, COM0B1);
+
+    cbi(TCCR1A, COM1A0);  // clear OC2A on Compare Match, PWM pin 11
+    cbi(TCCR1A, COM1A1);
+    cbi(TCCR1A, COM1B0);
+    cbi(TCCR1A, COM1B1);
+    status = false;
+    }
+    // OCR1A = 0;
+    // OCR1B = 0;
+    value1 = pgm_read_byte_near(sine256 + phase0);
     OCR0A = value1;
     OCR0B = value1;
-  } else if (phase0 > 127) {
+  } else if (phase0 > 126) {
+     if(status == false)
+    {
+    OCR0A = 0;
+    OCR0B = 0;
+    cbi(TCCR0A, COM0A0);  // clear OC2A on Compare Match, PWM pin 11
+    cbi(TCCR0A, COM0A1);
+    cbi(TCCR0A, COM0B0);
+    cbi(TCCR0A, COM0B1);
+
+    cbi(TCCR1A, COM1A0);  // clear OC2A on Compare Match, PWM pin 11
+    sbi(TCCR1A, COM1A1);
+    cbi(TCCR1A, COM1B0);
+    sbi(TCCR1A, COM1B1);
+
+    status = true;
+    }
     value1 = pgm_read_byte_near(sine256 + phase0);
     // if (value1 > 250) value1 = 250;
     // if (value1 < 4) value1 = 4;
-    OCR0A = 0;
-    OCR0B = 0;
+    // OCR0A = 0;
+    // OCR0B = 0;
     OCR1A = value1;
     OCR1B = value1;
   }
